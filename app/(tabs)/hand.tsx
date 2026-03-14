@@ -19,19 +19,48 @@ const HAND_TRACKER_HTML = `<!DOCTYPE html>
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
     html,body{width:100%;height:100%;background:#000;overflow:hidden}
+
+    /* video + canvas scale together so landmarks stay aligned */
+    #view{
+      position:absolute;top:0;left:0;width:100%;height:100%;
+      transform-origin:center center;
+    }
     #video{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover}
     #canvas{position:absolute;top:0;left:0}
+
+    /* HUD elements sit outside #view so they are never scaled */
     #status{
-      position:absolute;top:12px;left:12px;
+      position:absolute;top:72px;left:12px;
       color:#00D4FF;font-family:monospace;font-size:13px;
       background:rgba(0,0,0,0.65);padding:5px 12px;border-radius:6px;
       border:1px solid rgba(0,212,255,0.3);z-index:10;
     }
+    #zoom-controls{
+      position:absolute;right:14px;top:50%;transform:translateY(-50%);
+      display:flex;flex-direction:column;align-items:center;gap:8px;z-index:10;
+    }
+    .zoom-btn{
+      width:40px;height:40px;border-radius:20px;
+      background:rgba(0,0,0,0.65);border:1px solid rgba(0,212,255,0.4);
+      color:#00D4FF;font-size:22px;line-height:40px;text-align:center;
+      cursor:pointer;user-select:none;-webkit-user-select:none;
+    }
+    #zoom-label{
+      color:#00D4FF;font-family:monospace;font-size:12px;
+      background:rgba(0,0,0,0.55);padding:3px 6px;border-radius:4px;
+    }
   </style>
 </head><body>
-<video id="video" playsinline autoplay muted></video>
-<canvas id="canvas"></canvas>
+<div id="view">
+  <video id="video" playsinline autoplay muted></video>
+  <canvas id="canvas"></canvas>
+</div>
 <div id="status">Loading model...</div>
+<div id="zoom-controls">
+  <div class="zoom-btn" id="btn-in">+</div>
+  <div id="zoom-label">1.0x</div>
+  <div class="zoom-btn" id="btn-out">−</div>
+</div>
 <script type="module">
 import { HandLandmarker, FilesetResolver }
   from 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18/vision_bundle.mjs';
@@ -54,6 +83,25 @@ const CONNECTIONS = [
 let landmarker   = null;
 let lastTime     = -1;
 let running      = false;
+
+// ── Zoom ─────────────────────────────────────────────────────────────────────
+const view      = document.getElementById('view');
+const zoomLabel = document.getElementById('zoom-label');
+let zoom = 1.0;
+const ZOOM_MIN = 1.0, ZOOM_MAX = 4.0, ZOOM_STEP = 0.5;
+
+function applyZoom() {
+  view.style.transform = zoom === 1 ? '' : 'scale(' + zoom + ')';
+  zoomLabel.textContent = zoom.toFixed(1) + 'x';
+}
+document.getElementById('btn-in').addEventListener('click', () => {
+  zoom = Math.min(ZOOM_MAX, parseFloat((zoom + ZOOM_STEP).toFixed(1)));
+  applyZoom();
+});
+document.getElementById('btn-out').addEventListener('click', () => {
+  zoom = Math.max(ZOOM_MIN, parseFloat((zoom - ZOOM_STEP).toFixed(1)));
+  applyZoom();
+});
 
 // ── Init ────────────────────────────────────────────────────────────────────
 async function init() {
