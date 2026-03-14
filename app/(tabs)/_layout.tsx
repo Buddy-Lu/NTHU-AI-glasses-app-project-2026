@@ -51,6 +51,16 @@ export default function TabLayout() {
           ),
         }}
       />
+      <Tabs.Screen
+        name="hand"
+        options={{
+          title: 'Hand Track',
+          headerShown: false,
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="hand-left-outline" size={size} color={color} />
+          ),
+        }}
+      />
     </Tabs>
   );
 }
